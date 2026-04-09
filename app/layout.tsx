@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { DM_Sans } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,12 @@ export const metadata: Metadata = {
   description: "Gerador de documentos ABNT automatizado",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -17,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={cn("font-sans", dmSans.variable)}>
-      <body className="bg-neutral-900 text-neutral-100 antialiased h-screen overflow-hidden">
+      <body className="bg-neutral-900 text-neutral-100 antialiased h-screen overflow-hidden md:overflow-hidden overflow-auto">
         {children}
       </body>
     </html>
