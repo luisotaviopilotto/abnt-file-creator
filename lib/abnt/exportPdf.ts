@@ -20,7 +20,7 @@ export const exportToPdf = async () => {
       const style = window.getComputedStyle(el);
       if (el.offsetWidth > 0 && el.offsetHeight > 0 && style.opacity !== "0") return el;
     }
-    return document;
+    return document.body;
   };
 
   const previewContainer = getVisibleContainer();
