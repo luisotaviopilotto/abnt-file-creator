@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Document {
+  id         String      @id @default(uuid())
+  state      Json        @db.JsonB
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  changeLogs ChangeLog[]
+
+  @@map("documents")
+}
+
+model ChangeLog {
+  id         Int      @id @default(autoincrement())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  snapshot   Json     @db.JsonB
+  changedAt  DateTime @default(now())
+
+  @@map("change_logs")
+}

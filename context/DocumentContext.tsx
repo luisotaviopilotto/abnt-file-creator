@@ -7,6 +7,8 @@ interface DocumentContextType {
   state: DocumentState;
   docId: string | null;
   setDocId: (id: string) => void;
+  markLoadedFromDb: () => void;
+  syncStatus: "idle" | "saving" | "saved" | "error";
   headingPages: Record<string, number>;
   setHeadingPages: (pages: Record<string, number>) => void;
   totalPages: number;
@@ -67,50 +69,55 @@ const DocumentContext = createContext<DocumentContextType | undefined>(undefined
 
 export const DocumentProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<DocumentState>(initialState);
-  const [docId, setDocId] = useState<string | null>(null);
+  const [docId, setDocIdState] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [headingPages, setHeadingPages] = useState<Record<string, number>>({});
   const [totalPages, setTotalPages] = useState(0);
   const isMounted = React.useRef(false);
+  const isLoadedFromDb = React.useRef(false);
+  const docIdRef = React.useRef<string | null>(null);
 
-  // Load from localStorage on mount
+  const setDocId = (id: string) => {
+    docIdRef.current = id;
+    setDocIdState(id);
+  };
+
+  // Load from localStorage on mount — only as fallback when no docId is set
   useEffect(() => {
-    const loadSavedState = () => {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          setState(JSON.parse(saved));
-        } catch (err) {
-          console.error("Failed to parse saved state", err);
-        }
-      }
+    const timeoutId = setTimeout(() => {
       isMounted.current = true;
-    };
-
-    // Use a small delay or requestAnimationFrame to ensure this happens after hydration
-    // and to avoid the strict synchronous setState lint error
-    const timeoutId = setTimeout(loadSavedState, 0);
+    }, 0);
     return () => clearTimeout(timeoutId);
   }, []);
 
-  // Auto-save to localStorage
+  // Auto-save to localStorage as local cache
   useEffect(() => {
     if (isMounted.current) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state]);
 
-  // Auto-save to DB when in shared mode (debounced 1s)
+  // Auto-save to DB — only fires on state changes AFTER the initial load from DB
   useEffect(() => {
-    if (!isMounted.current || !docId) return;
-    const timer = setTimeout(() => {
-      fetch(`/api/documents/${docId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
-      }).catch(console.error);
-    }, 1000);
+    if (!isLoadedFromDb.current) return;
+    const id = docIdRef.current;
+    if (!id) return;
+    setSyncStatus("saving");
+    const timer = setTimeout(async () => {
+      try {
+        await fetch(`/api/documents/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(state),
+        });
+        setSyncStatus("saved");
+        setTimeout(() => setSyncStatus("idle"), 2000);
+      } catch {
+        setSyncStatus("error");
+      }
+    }, 3000);
     return () => clearTimeout(timer);
-  }, [state, docId]);
+  }, [state]); // docId intentionally excluded — using ref to avoid triggering on load
 
   const updateCover = (data: Partial<DocumentState["cover"]>) =>
     setState((prev) => ({ ...prev, cover: { ...prev.cover, ...data } }));
@@ -157,6 +164,10 @@ export const DocumentProvider = ({ children }: { children: ReactNode }) => {
   const updateSettings = (settings: Partial<DocumentSettings>) =>
     setState((prev) => ({ ...prev, settings: { ...prev.settings, ...settings } }));
 
+  const markLoadedFromDb = () => {
+    isLoadedFromDb.current = true;
+  };
+
   const exportConfig = () => {
     const dataStr = JSON.stringify(state, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -190,6 +201,8 @@ export const DocumentProvider = ({ children }: { children: ReactNode }) => {
         state,
         docId,
         setDocId,
+        markLoadedFromDb,
+        syncStatus,
         headingPages,
         setHeadingPages,
         totalPages,
