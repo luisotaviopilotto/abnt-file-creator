@@ -12,7 +12,6 @@ export const exportToPdf = async () => {
     return;
   }
 
-  // Temporarily remove zoom transform so pages are captured at true size
   const scaledWrapper = pages[0].closest<HTMLElement>("[style*='scale']");
   const originalTransform = scaledWrapper?.style.transform ?? null;
   if (scaledWrapper) {
@@ -49,41 +48,20 @@ export const exportToPdf = async () => {
     pdf.addImage(dataUrl, "JPEG", 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM);
   }
 
-  // Restore zoom
   if (scaledWrapper && originalTransform !== null) {
     scaledWrapper.style.transform = originalTransform;
     scaledWrapper.style.transformOrigin = "top";
   }
 
-  const pdfBlob = pdf.output("blob");
-
-  // If Vercel Blob is available, upload directly from client (bypasses 4.5MB function limit)
-  // Otherwise fall back to data URI download
-  try {
-    const { upload, del } = await import("@vercel/blob/client");
-
-    const filename = `pdf/${Date.now()}_Trabalho_ABNT.pdf`;
-    const { url } = await upload(filename, pdfBlob, {
-      access: "public",
-      handleUploadUrl: "/api/pdf-upload",
-      contentType: "application/pdf",
-    });
-
-    // Open in new tab — native PDF viewer with download button
-    window.open(url, "_blank");
-
-    // Delete after 5 minutes
-    setTimeout(async () => {
-      try { await del(url); } catch { /* ignore */ }
-    }, 5 * 60 * 1000);
-
-  } catch {
-    // Fallback: data URI download (works without Blob token)
-    const a = document.createElement("a");
-    a.href = pdf.output("datauristring");
-    a.download = "Trabalho_ABNT.pdf";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
+  // Direct client-side download — no server involved, no permission issues
+  const blob = pdf.output("blob");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Trabalho_ABNT.pdf";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
