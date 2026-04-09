@@ -55,5 +55,13 @@ export const exportToPdf = async () => {
     scaledWrapper.style.transformOrigin = "top";
   }
 
-  pdf.save("Trabalho_ABNT.pdf");
+  // Use data URI for maximum browser compatibility — avoids blob: URL restrictions
+  // that some browsers (Edge) enforce on programmatic downloads
+  const dataUri = pdf.output("datauristring");
+  const a = document.createElement("a");
+  a.href = dataUri;
+  a.download = "Trabalho_ABNT.pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 };
