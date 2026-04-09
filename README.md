@@ -1,34 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ABNT_GEN
 
-## Getting Started
+Gerador de documentos acadêmicos no padrão ABNT com preview em tempo real, exportação para PDF e colaboração via link compartilhável.
 
-First, run the development server:
+## Funcionalidades
+
+- Editor visual com preview A4 em tempo real
+- Estrutura completa: Capa, Folha de Rosto, Resumo, Sumário, Conteúdo e Referências
+- Paginação automática com numeração ABNT
+- Exportação para PDF (fiel ao preview via `html-to-image` + `jsPDF`)
+- Compartilhamento por link — qualquer pessoa com o link pode editar
+- Auto-save no banco de dados com debounce de 3 segundos
+- Histórico de alterações (`change_logs`) por documento
+- Importação de configuração via `ABNT_CONFIG.json`
+- Suporte a fontes Arial e Times New Roman
+- Blocos de conteúdo: títulos (H1/H2/H3), parágrafos, citações longas, imagens e tabelas
+
+## Stack
+
+- **Next.js 16** (App Router, Turbopack)
+- **React 19**
+- **Tailwind CSS v4**
+- **Prisma 7** com **PostgreSQL** (Neon)
+- **`@prisma/adapter-pg`** para conexão via driver nativo
+- **`html-to-image`** + **`jsPDF`** para exportação PDF
+- **`better-sqlite3`** removido — persistência 100% via Postgres
+
+## Estrutura de Rotas
+
+| Rota | Descrição |
+|------|-----------|
+| `/` | Tela inicial — criar novo documento ou importar JSON |
+| `/doc/[id]` | Editor completo do documento (UUID) |
+| `POST /api/documents` | Cria um novo documento no banco |
+| `GET /api/documents/[id]` | Carrega o estado de um documento |
+| `PATCH /api/documents/[id]` | Atualiza o documento e registra log |
+| `DELETE /api/documents/[id]` | Remove o documento e seus logs |
+| `GET /api/documents/[id]/logs` | Lista o histórico de alterações |
+
+## Schema do Banco
+
+```prisma
+model Document {
+  id         String      @id @default(uuid())
+  state      Json        @db.JsonB
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  changeLogs ChangeLog[]
+}
+
+model ChangeLog {
+  id         Int      @id @default(autoincrement())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  snapshot   Json     @db.JsonB
+  changedAt  DateTime @default(now())
+}
+```
+
+## Configuração
+
+1. Clone o repositório e instale as dependências:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+```
+
+2. Configure o `.env` com a URL do banco Postgres (Neon ou outro):
+
+```env
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+```
+
+3. Execute as migrations:
+
+```bash
+bun prisma migrate dev
+```
+
+4. Inicie o servidor de desenvolvimento:
+
+```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Acesse [http://localhost:3000](http://localhost:3000).
