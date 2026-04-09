@@ -37,7 +37,7 @@ export const exportToPdf = async () => {
 
     const dataUrl = await toJpeg(page, {
       quality: 1.0,
-      pixelRatio: 3, // ~288dpi
+      pixelRatio: 3,
       backgroundColor: "#ffffff",
       skipAutoScale: true,
     });
@@ -55,13 +55,31 @@ export const exportToPdf = async () => {
     scaledWrapper.style.transformOrigin = "top";
   }
 
-  // Use data URI for maximum browser compatibility — avoids blob: URL restrictions
-  // that some browsers (Edge) enforce on programmatic downloads
-  const dataUri = pdf.output("datauristring");
-  const a = document.createElement("a");
-  a.href = dataUri;
-  a.download = "Trabalho_ABNT.pdf";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Upload to Vercel Blob and open the public URL — avoids all browser download restrictions
+  const pdfBlob = pdf.output("blob");
+  const res = await fetch("/api/pdf-upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/pdf" },
+    body: pdfBlob,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Falha ao fazer upload do PDF.");
+  }
+
+  const { url, type } = await res.json();
+
+  if (type === "dataurl") {
+    // Fallback: direct download via data URI (no Blob token configured)
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Trabalho_ABNT.pdf";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    // Open Vercel Blob public URL in new tab
+    window.open(url, "_blank");
+  }
 };

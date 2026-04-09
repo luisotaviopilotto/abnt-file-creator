@@ -11,7 +11,7 @@ interface Props {
 export function SharedDocumentLoader({ docId }: Props) {
   const { importConfig, setDocId, markLoadedFromDb } = useDocumentContext();
   const loaded = useRef(false);
-  const [error, setError] = useState(false);
+  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
 
   useEffect(() => {
     if (loaded.current) return;
@@ -25,19 +25,30 @@ export function SharedDocumentLoader({ docId }: Props) {
       .then((state) => {
         importConfig(JSON.stringify(state));
         setDocId(docId);
-        // Mark as loaded AFTER state is set — auto-save only fires after this point
-        setTimeout(() => markLoadedFromDb(), 0);
+        setTimeout(() => {
+          markLoadedFromDb();
+          setStatus("done");
+        }, 0);
       })
-      .catch(() => setError(true));
-  }, [docId, importConfig, setDocId]);
+      .catch(() => setStatus("error"));
+  }, [docId, importConfig, setDocId, markLoadedFromDb]);
 
-  if (error) {
+  if (status === "error") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950">
         <div className="text-center">
           <p className="text-red-400 font-medium mb-4">Documento não encontrado.</p>
           <a href="/" className="text-sm text-blue-400 hover:underline">Voltar ao início</a>
         </div>
+      </div>
+    );
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-neutral-950 gap-4">
+        <IconLoader2 size={36} className="text-blue-500 animate-spin" />
+        <p className="text-sm text-neutral-400">Carregando documento...</p>
       </div>
     );
   }
