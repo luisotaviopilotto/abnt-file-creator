@@ -1,30 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 
+// This route handles the client-upload token handshake with Vercel Blob
 export async function POST(req: NextRequest) {
+  const body = (await req.json()) as HandleUploadBody;
+
   try {
-    const arrayBuffer = await req.arrayBuffer();
-
-    // Vercel Blob requires BLOB_READ_WRITE_TOKEN — fallback to base64 data URL if not available
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-      const dataUrl = `data:application/pdf;base64,${base64}`;
-      return NextResponse.json({ url: dataUrl, type: "dataurl" });
-    }
-
-    const { put, del } = await import("@vercel/blob");
-    const filename = `pdf/${Date.now()}_Trabalho_ABNT.pdf`;
-
-    const { url } = await put(filename, arrayBuffer, {
-      access: "public",
-      contentType: "application/pdf",
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      onBeforeGenerateToken: async () => ({
+        allowedContentTypes: ["application/pdf"],
+        maximumSizeInBytes: 50 * 1024 * 1024, // 50MB
+        tokenPayload: JSON.stringify({ ts: Date.now() }),
+      }),
+      onUploadCompleted: async () => {
+        // Nothing to do — deletion is handled client-side via a separate call
+      },
     });
 
-    // Delete after 5 minutes
-    setTimeout(async () => {
-      try { await del(url); } catch { /* ignore */ }
-    }, 5 * 60 * 1000);
-
-    return NextResponse.json({ url, type: "blob" });
+    return NextResponse.json(jsonResponse);
   } catch (err) {
     console.error("[POST /api/pdf-upload]", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });

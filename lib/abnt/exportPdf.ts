@@ -12,7 +12,7 @@ export const exportToPdf = async () => {
     return;
   }
 
-  // Temporarily remove the zoom transform so pages are captured at true size
+  // Temporarily remove zoom transform so pages are captured at true size
   const scaledWrapper = pages[0].closest<HTMLElement>("[style*='scale']");
   const originalTransform = scaledWrapper?.style.transform ?? null;
   if (scaledWrapper) {
@@ -55,31 +55,35 @@ export const exportToPdf = async () => {
     scaledWrapper.style.transformOrigin = "top";
   }
 
-  // Upload to Vercel Blob and open the public URL — avoids all browser download restrictions
   const pdfBlob = pdf.output("blob");
-  const res = await fetch("/api/pdf-upload", {
-    method: "POST",
-    headers: { "Content-Type": "application/pdf" },
-    body: pdfBlob,
-  });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Falha ao fazer upload do PDF.");
-  }
+  // If Vercel Blob is available, upload directly from client (bypasses 4.5MB function limit)
+  // Otherwise fall back to data URI download
+  try {
+    const { upload, del } = await import("@vercel/blob/client");
 
-  const { url, type } = await res.json();
+    const filename = `pdf/${Date.now()}_Trabalho_ABNT.pdf`;
+    const { url } = await upload(filename, pdfBlob, {
+      access: "public",
+      handleUploadUrl: "/api/pdf-upload",
+      contentType: "application/pdf",
+    });
 
-  if (type === "dataurl") {
-    // Fallback: direct download via data URI (no Blob token configured)
+    // Open in new tab — native PDF viewer with download button
+    window.open(url, "_blank");
+
+    // Delete after 5 minutes
+    setTimeout(async () => {
+      try { await del(url); } catch { /* ignore */ }
+    }, 5 * 60 * 1000);
+
+  } catch {
+    // Fallback: data URI download (works without Blob token)
     const a = document.createElement("a");
-    a.href = url;
+    a.href = pdf.output("datauristring");
     a.download = "Trabalho_ABNT.pdf";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-  } else {
-    // Open Vercel Blob public URL in new tab
-    window.open(url, "_blank");
   }
 };
