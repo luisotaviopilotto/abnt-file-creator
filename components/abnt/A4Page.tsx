@@ -15,7 +15,7 @@ export const A4Page = ({ children, showPageNumber, pageNumber }: A4PageProps) =>
 
   return (
     <div
-      className="a4-page-container relative bg-white text-black shadow-2xl mx-auto mb-10 overflow-hidden print:shadow-none print:mb-0 shrink-0"
+      className="a4-page-container relative bg-white text-black shadow-2xl mx-auto mb-10 print:shadow-none print:mb-0 shrink-0"
       style={{
         width: "21cm",
         minWidth: "21cm",
@@ -33,13 +33,15 @@ export const A4Page = ({ children, showPageNumber, pageNumber }: A4PageProps) =>
         fontFamily: state.settings.fontFamily === "Arial" ? "Arial, sans-serif" : "'Times New Roman', Times, serif",
       }}
     >
-      {/* ABNT Page Numbering: top right, within the content area at 2cm from top edge */}
+      {/* ABNT: número no canto superior direito, a 2cm da borda superior e 2cm da borda direita.
+          O elemento é filho direto do container (position: absolute ignora o padding),
+          então top/right são relativos à borda física da folha. */}
       {showPageNumber && pageNumber && (
         <div
-          className="absolute text-right"
+          className="absolute"
           style={{
-            top: "-1cm",
-            right: "0cm",
+            top: "2cm",
+            right: "2cm",
             fontSize: "10pt",
             fontFamily: "Arial, sans-serif",
             lineHeight: "1",
@@ -49,7 +51,7 @@ export const A4Page = ({ children, showPageNumber, pageNumber }: A4PageProps) =>
         </div>
       )}
       
-      {/* Content wrapper: Exactly 16cm x 24.7cm due to padding and box-sizing */}
+      {/* Content wrapper */}
       <div className="w-full h-full text-justify relative overflow-hidden">
         {children}
       </div>
