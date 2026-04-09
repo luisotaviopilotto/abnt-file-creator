@@ -27,17 +27,19 @@ export const ConteudoView = () => {
       const MAX_HEIGHT_PX = 930; // 24.7cm útil
       const newPages: ContentBlock[][] = [[]];
       const newHeadingPages: Record<string, number> = {};
-      
-      tempDiv = document.createElement("div");
-      tempDiv.style.width = "16cm";
-      tempDiv.style.position = "fixed";
-      tempDiv.style.top = "0";
-      tempDiv.style.left = "-100vw";
-      tempDiv.style.visibility = "hidden";
-      tempDiv.style.fontSize = "12pt";
-      tempDiv.style.lineHeight = "1.5";
-      tempDiv.style.fontFamily = state.settings.fontFamily === "Arial" ? "Arial, sans-serif" : "'Times New Roman', Times, serif";
-      document.body.appendChild(tempDiv);
+
+      // Use a const locally so TypeScript knows it's never null inside this scope
+      const div = document.createElement("div");
+      tempDiv = div;
+      div.style.width = "16cm";
+      div.style.position = "fixed";
+      div.style.top = "0";
+      div.style.left = "-100vw";
+      div.style.visibility = "hidden";
+      div.style.fontSize = "12pt";
+      div.style.lineHeight = "1.5";
+      div.style.fontFamily = state.settings.fontFamily === "Arial" ? "Arial, sans-serif" : "'Times New Roman', Times, serif";
+      document.body.appendChild(div);
 
       const applyBlockStyle = (item: HTMLDivElement, block: ContentBlock, index: number) => {
         item.style.textAlign = "justify";
@@ -103,10 +105,10 @@ export const ConteudoView = () => {
             item.innerText = block.content;
           }
 
-          tempDiv.appendChild(item);
+          div.appendChild(item);
 
-          if (tempDiv.scrollHeight > MAX_HEIGHT_PX) {
-            tempDiv.removeChild(item);
+          if (div.scrollHeight > MAX_HEIGHT_PX) {
+            div.removeChild(item);
 
             if (block.type === "paragraph" || block.type === "quote") {
               const words = block.content.split(" ");
@@ -115,13 +117,13 @@ export const ConteudoView = () => {
               
               const subItem = document.createElement("div");
               applyBlockStyle(subItem, block, i);
-              tempDiv.appendChild(subItem);
+              div.appendChild(subItem);
 
               let wordIdx = 0;
               while (wordIdx < words.length) {
                 const testText = currentPart + (currentPart ? " " : "") + words[wordIdx];
                 subItem.innerText = testText;
-                if (tempDiv.scrollHeight > MAX_HEIGHT_PX) {
+                if (div.scrollHeight > MAX_HEIGHT_PX) {
                   remainingPart = words.slice(wordIdx).join(" ");
                   break;
                 }
@@ -139,7 +141,7 @@ export const ConteudoView = () => {
               
               if (remainingPart) {
                 newPages.push([]);
-                tempDiv.innerHTML = "";
+                div.innerHTML = "";
                 const remainingBlock: ContentBlock = { 
                   ...block, 
                   id: crypto.randomUUID(), 
@@ -149,13 +151,11 @@ export const ConteudoView = () => {
                 queue.splice(i + 1, 0, remainingBlock);
               }
             } else {
-              // Outros blocos (Títulos, Imagens, Tabelas): move integramente
               if (newPages[newPages.length - 1].length > 0) {
                 newPages.push([block]);
-                tempDiv.innerHTML = "";
+                div.innerHTML = "";
                 const newItem = document.createElement("div");
                 applyBlockStyle(newItem, block, 0);
-                // Re-populate newItem based on type
                 if (block.type === 'image') {
                   newItem.innerHTML = item.innerHTML;
                 } else if (block.type === 'table') {
@@ -163,7 +163,7 @@ export const ConteudoView = () => {
                 } else {
                   newItem.innerText = block.content;
                 }
-                tempDiv.appendChild(newItem);
+                div.appendChild(newItem);
               } else {
                 newPages[newPages.length - 1].push(block);
               }
@@ -180,8 +180,8 @@ export const ConteudoView = () => {
       };
 
       processBlocks(content);
-      if (tempDiv.parentNode === document.body) {
-        document.body.removeChild(tempDiv);
+      if (div.parentNode === document.body) {
+        document.body.removeChild(div);
       }
       tempDiv = null;
       setPages(newPages);

@@ -41,19 +41,20 @@ export const ReferenciasView = () => {
       tempDiv.appendChild(title);
 
       references.forEach((ref) => {
-        if (!tempDiv) return;
+        const div = tempDiv;
+        if (!div) return;
         const item = document.createElement("div");
         item.style.textAlign = "justify";
         item.style.marginBottom = "1rem";
         item.innerText = ref.text;
-        tempDiv.appendChild(item);
+        div.appendChild(item);
 
-        if (tempDiv.scrollHeight > MAX_HEIGHT_PX) {
-          tempDiv.removeChild(item);
+        if (div.scrollHeight > MAX_HEIGHT_PX) {
+          div.removeChild(item);
           if (newPages[newPages.length - 1].length > 0) {
             newPages.push([ref]);
-            tempDiv.innerHTML = "";
-            tempDiv.appendChild(item);
+            div.innerHTML = "";
+            div.appendChild(item);
           } else {
             newPages[newPages.length - 1].push(ref);
           }
