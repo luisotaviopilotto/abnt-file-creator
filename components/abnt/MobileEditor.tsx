@@ -20,7 +20,7 @@ export function MobileEditor({ children }: Props) {
         <div className="w-[400px] flex-shrink-0 bg-neutral-950 border-r border-neutral-800 overflow-y-auto">
           <Sidebar />
         </div>
-        <div className="flex-1 bg-neutral-800 overflow-y-auto relative">
+        <div id="preview-desktop" className="flex-1 bg-neutral-800 overflow-y-auto relative">
           {children}
         </div>
       </main>
@@ -63,7 +63,7 @@ export function MobileEditor({ children }: Props) {
         {/* Content area */}
         <div className="flex-1 overflow-hidden relative">
           {/* Preview */}
-          <div className={`absolute inset-0 transition-opacity duration-200 ${view === "preview" ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+          <div id="preview-mobile" className={`absolute inset-0 transition-opacity duration-200 ${view === "preview" ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
             {children}
           </div>
 

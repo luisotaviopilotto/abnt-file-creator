@@ -14,6 +14,8 @@ export const ConteudoView = () => {
   const numberingMap = calculateHeadingNumbering(content);
 
   useEffect(() => {
+    let tempDiv: HTMLDivElement | null = null;
+
     const measureAndPaginate = () => {
       if (content.length === 0) {
         setPages([]);
@@ -26,7 +28,7 @@ export const ConteudoView = () => {
       const newPages: ContentBlock[][] = [[]];
       const newHeadingPages: Record<string, number> = {};
       
-      const tempDiv = document.createElement("div");
+      tempDiv = document.createElement("div");
       tempDiv.style.width = "16cm";
       tempDiv.style.position = "fixed";
       tempDiv.style.top = "0";
@@ -178,14 +180,22 @@ export const ConteudoView = () => {
       };
 
       processBlocks(content);
-      document.body.removeChild(tempDiv);
+      if (tempDiv.parentNode === document.body) {
+        document.body.removeChild(tempDiv);
+      }
+      tempDiv = null;
       setPages(newPages);
       setHeadingPages(newHeadingPages);
       setTotalPages(newPages.length);
     };
 
     const timer = setTimeout(measureAndPaginate, 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (tempDiv && tempDiv.parentNode === document.body) {
+        document.body.removeChild(tempDiv);
+      }
+    };
   }, [content, state.settings.fontFamily, setHeadingPages, setTotalPages]);
 
   if (content.length === 0) return null;

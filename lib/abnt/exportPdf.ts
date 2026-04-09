@@ -6,7 +6,25 @@ const A4_HEIGHT_MM = 297;
 export const exportToPdf = async () => {
   const { toJpeg } = await import("html-to-image");
 
-  const pages = document.querySelectorAll<HTMLElement>(".a4-page-container");
+  // Pick the visible preview container.
+  // MobileEditor renders both #preview-desktop and #preview-mobile in the DOM —
+  // we need the one that is actually visible (not hidden by display:none or opacity:0).
+  const getVisibleContainer = (): Element => {
+    const candidates = ["preview-desktop", "preview-mobile"]
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    for (const el of candidates) {
+      // offsetWidth/offsetHeight are 0 when hidden via display:none or inside a hidden ancestor
+      // Also skip opacity:0 (inactive mobile tab)
+      const style = window.getComputedStyle(el);
+      if (el.offsetWidth > 0 && el.offsetHeight > 0 && style.opacity !== "0") return el;
+    }
+    return document;
+  };
+
+  const previewContainer = getVisibleContainer();
+  const pages = previewContainer.querySelectorAll<HTMLElement>(".a4-page-container");
   if (pages.length === 0) {
     alert("Nenhuma página encontrada para exportar.");
     return;
